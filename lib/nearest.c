@@ -144,7 +144,7 @@ LIQ_PRIVATE struct nearest_map *nearest_init(const colormap *map, bool fast)
     bool skip_index[map->colors]; for(unsigned int j=0; j < map->colors; j++) skip_index[j]=false;
 
 
-    const unsigned int num_vantage_points = map->colors > 16 ? MIN(map->colors/4, subset_palette->colors) : 0;
+    const unsigned int num_vantage_points = 0;
     centroids->heads = mempool_alloc(&centroids->mempool, sizeof(centroids->heads[0])*(num_vantage_points+1), mempool_size); // +1 is fallback head
 
     // floats and colordifference calculations are not perfect
