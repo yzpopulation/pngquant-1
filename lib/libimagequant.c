@@ -385,7 +385,7 @@ LIQ_EXPORT liq_attr* liq_attr_copy(liq_attr *orig)
 
 static void *liq_aligned_malloc(size_t size)
 {
-    unsigned char *ptr = malloc(size + 16);
+    unsigned char *ptr = (unsigned char *)malloc(size + 16);
     if (!ptr) {
         return NULL;
     }
@@ -399,7 +399,7 @@ static void *liq_aligned_malloc(size_t size)
 
 static void liq_aligned_free(void *inptr)
 {
-    unsigned char *ptr = inptr;
+    unsigned char *ptr = (unsigned char *)inptr;
     size_t offset = ptr[-1] ^ 0x59;
     assert(offset > 0 && offset <= 16);
     free(ptr - offset);
