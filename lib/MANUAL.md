@@ -36,7 +36,7 @@ Alternatively you can compile the library with your program simply by including 
 
 The library can be compiled with any C compiler that has at least basic support for C99 (GCC, clang, ICC, C++ Builder, even Tiny C Compiler), but Visual Studio 2012 and older are not up to date with the 1999 C standard. There are 3 options for using `libimagequant` with Visual Studio:
 
- * Use Visual Studio **2013** (MSVC12) or newer.
+ * Use Visual Studio **2013** (MSVC 18) or newer.
  * Or use GCC from [MinGW](http://www.mingw.org). Use GCC to build `libimagequant.a` (using above instructions for Unix) and add it along with `libgcc.a` (shipped with the MinGW compiler) to your VC project.
  * Or use [C++ version of `libimagequant`](https://github.com/pornel/pngquant/tree/cpp). The C++ version is not as up-to-date as C version, but should be compatible with Visual Studio older than 2013 (VC12).
 
@@ -85,7 +85,7 @@ There are 3 ways to create image object for quantization:
 
 Returns object that will hold initial settings (attributes) for the library. The object should be freed using `liq_attr_destroy()` after it's no longer needed.
 
-Returns `NULL` in the unlikely case that the library cannot run on the current machine (e.g. the library has been compiled for SSE2-capable x86 CPU and run on VIA C3 CPU).
+Returns `NULL` in the unlikely case that the library cannot run on the current machine (e.g. the library has been compiled for SSE-capable x86 CPU and run on VIA C3 CPU).
 
 ----
 

@@ -31,7 +31,7 @@ struct box {
     unsigned int colors;
 };
 
-inline static double variance_diff(double val, const double good_enough) ALWAYS_INLINE;
+ALWAYS_INLINE static double variance_diff(double val, const double good_enough);
 inline static double variance_diff(double val, const double good_enough)
 {
     val *= val;
@@ -76,7 +76,7 @@ static double box_max_error(const hist_item achv[], const struct box *box)
     return max_error;
 }
 
-inline static double color_weight(f_pixel median, hist_item h) ALWAYS_INLINE;
+ALWAYS_INLINE static double color_weight(f_pixel median, hist_item h);
 
 static inline void hist_item_swap(hist_item *l, hist_item *r)
 {
@@ -87,10 +87,12 @@ static inline void hist_item_swap(hist_item *l, hist_item *r)
     }
 }
 
-inline static unsigned int qsort_pivot(const hist_item *const base, const unsigned int len) ALWAYS_INLINE;
+ALWAYS_INLINE static unsigned int qsort_pivot(const hist_item *const base, const unsigned int len);
 inline static unsigned int qsort_pivot(const hist_item *const base, const unsigned int len)
 {
-    if (len < 32) return len/2;
+    if (len < 32) {
+        return len/2;
+    }
 
     const unsigned int aidx=8, bidx=len/2, cidx=len-1;
     const unsigned int a=base[aidx].sort_value, b=base[bidx].sort_value, c=base[cidx].sort_value;
@@ -98,7 +100,7 @@ inline static unsigned int qsort_pivot(const hist_item *const base, const unsign
                    : ((b > c) ? bidx : ((a < c) ? aidx : cidx ));
 }
 
-inline static unsigned int qsort_partition(hist_item *const base, const unsigned int len) ALWAYS_INLINE;
+ALWAYS_INLINE static unsigned int qsort_partition(hist_item *const base, const unsigned int len);
 inline static unsigned int qsort_partition(hist_item *const base, const unsigned int len)
 {
     unsigned int l = 1, r = len;
@@ -236,7 +238,9 @@ static int best_splittable_box(struct box* bv, unsigned int boxes, const double 
 {
     int bi=-1; double maxsum=0;
     for(unsigned int i=0; i < boxes; i++) {
-        if (bv[i].colors < 2) continue;
+        if (bv[i].colors < 2) {
+            continue;
+        }
 
         // looks only at max variance, because it's only going to split by it
         const double cv = MAX(bv[i].variance.r, MAX(bv[i].variance.g,bv[i].variance.b));

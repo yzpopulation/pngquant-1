@@ -15,7 +15,14 @@ CFLAGS ?= -Wall -Wno-unknown-pragmas -I. $(CFLAGSOPT)
 CFLAGS += $(CFLAGSADD)
 
 ifdef USE_SSE
-CFLAGS += -msse2 -DUSE_SSE=$(USE_SSE)
+CFLAGS += -msse -DUSE_SSE=$(USE_SSE)
+endif
+
+ifeq ($(CC), icc)
+# disable omp pragmas warning when -openmp is not set
+CFLAGS += -fast -wd3180
+# required for -ipo (set by -fast)
+AR = xiar
 endif
 
 OBJS = pam.o mediancut.o blur.o mempool.o viter.o nearest.o libimagequant.o
@@ -34,7 +41,11 @@ dll:
 	$(MAKE) CFLAGSADD="-DLIQ_EXPORT='__declspec(dllexport)'" $(DLL)
 
 openmp::
+ifeq ($(CC), icc)
+	$(MAKE) CFLAGSADD=-openmp OPENMPFLAGS=-openmp -j8
+else
 	$(MAKE) CFLAGSADD=-fopenmp OPENMPFLAGS="-Bstatic -lgomp" -j8
+endif
 
 $(DLL) $(DLLIMP): $(OBJS)
 	$(CC) -fPIC -shared -o $(DLL) $(OBJS) $(LDFLAGS) -Wl,--out-implib,$(DLLIMP),--output-def,$(DLLDEF)
