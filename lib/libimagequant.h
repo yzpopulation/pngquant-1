@@ -45,7 +45,11 @@ typedef enum liq_error {
     LIQ_INVALID_POINTER,
 } liq_error;
 
-enum liq_ownership {LIQ_OWN_ROWS=4, LIQ_OWN_PIXELS=8};
+enum liq_ownership {
+    LIQ_OWN_ROWS=4,
+    LIQ_OWN_PIXELS=8,
+    LIQ_OWN_QUALITY_MAP=16,
+};
 
 LIQ_EXPORT liq_attr* liq_attr_create(void);
 LIQ_EXPORT liq_attr* liq_attr_create_with_allocator(void* (*malloc)(size_t), void (*free)(void*));
@@ -80,6 +84,7 @@ LIQ_EXPORT liq_error liq_image_set_memory_ownership(liq_image* image, int owners
 LIQ_EXPORT int liq_image_get_width(const liq_image* img);
 LIQ_EXPORT int liq_image_get_height(const liq_image* img);
 LIQ_EXPORT void liq_image_destroy(liq_image* img);
+LIQ_EXPORT liq_error liq_image_set_quality_map(liq_image *image, unsigned char *quality_map);
 
 LIQ_EXPORT liq_result* liq_quantize_image(liq_attr* options, liq_image* input_image);
 

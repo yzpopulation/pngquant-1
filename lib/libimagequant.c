@@ -83,7 +83,7 @@ struct liq_image {
     liq_image_get_rgba_row_callback *row_callback;
     void *row_callback_user_info;
     float min_opaque_val;
-    bool free_pixels, free_rows, free_rows_internal;
+    bool free_pixels, free_rows, free_rows_internal, free_noise;
 };
 
 typedef struct liq_remapping_result {
@@ -120,6 +120,7 @@ static histogram *get_histogram(liq_image *input_image, liq_attr *options);
 static const rgba_pixel *liq_image_get_row_rgba(liq_image *input_image, unsigned int row);
 static const f_pixel *liq_image_get_row_f(liq_image *input_image, unsigned int row);
 static void liq_remapping_result_destroy(liq_remapping_result *result);
+static void liq_image_free_noise(liq_image *input_image);
 
 static void liq_verbose_printf(const liq_attr *context, const char *fmt, ...)
 {
@@ -507,16 +508,17 @@ static liq_image *liq_image_create_internal(liq_attr *attr, rgba_pixel* rows[], 
 LIQ_EXPORT liq_error liq_image_set_memory_ownership(liq_image *img, int ownership_flags)
 {
     if (!CHECK_STRUCT_TYPE(img, liq_image)) return LIQ_INVALID_POINTER;
-    if (!img->rows || !ownership_flags || (ownership_flags & ~(LIQ_OWN_ROWS|LIQ_OWN_PIXELS))) {
+    if (!ownership_flags || (ownership_flags & ~(LIQ_OWN_ROWS|LIQ_OWN_PIXELS|LIQ_OWN_QUALITY_MAP))) {
         return LIQ_VALUE_OUT_OF_RANGE;
     }
 
     if (ownership_flags & LIQ_OWN_ROWS) {
-        if (img->free_rows_internal) return LIQ_VALUE_OUT_OF_RANGE;
+        if (!img->rows || img->free_rows_internal) return LIQ_VALUE_OUT_OF_RANGE;
         img->free_rows = true;
     }
 
     if (ownership_flags & LIQ_OWN_PIXELS) {
+        if (!img->rows) return LIQ_VALUE_OUT_OF_RANGE;
         img->free_pixels = true;
         if (!img->pixels) {
             // for simplicity of this API there's no explicit bitmap argument,
@@ -526,6 +528,11 @@ LIQ_EXPORT liq_error liq_image_set_memory_ownership(liq_image *img, int ownershi
                 img->pixels = MIN(img->pixels, img->rows[i]);
             }
         }
+    }
+
+    if (ownership_flags & LIQ_OWN_QUALITY_MAP) {
+        if (!img->noise || img->free_noise) return LIQ_VALUE_OUT_OF_RANGE;
+        img->free_noise = true;
     }
 
     return LIQ_OK;
@@ -584,6 +591,18 @@ LIQ_EXPORT liq_image *liq_image_create_rgba(liq_attr *attr, void* bitmap, int wi
     image->free_rows = true;
     image->free_rows_internal = true;
     return image;
+}
+
+LIQ_EXPORT liq_error liq_image_set_quality_map(liq_image *image, unsigned char *quality_map)
+{
+    if (!CHECK_STRUCT_TYPE(image, liq_image) || !CHECK_USER_POINTER(quality_map)) {
+        return LIQ_INVALID_POINTER;
+    }
+
+    liq_image_free_noise(image);
+    image->noise = quality_map;
+
+    return LIQ_OK;
 }
 
 NEVER_INLINE LIQ_EXPORT void liq_executing_user_callback(liq_image_get_rgba_row_callback *callback, liq_color *temp_row, int row, int width, void *user_info);
@@ -695,15 +714,22 @@ static void liq_image_free_rgba_source(liq_image *input_image)
     }
 }
 
+static void liq_image_free_noise(liq_image *input_image)
+{
+    if (input_image->noise && input_image->free_noise) {
+        input_image->free(input_image->noise);
+        input_image->free_noise = false;
+        input_image->noise = NULL;
+    }
+}
+
 LIQ_EXPORT void liq_image_destroy(liq_image *input_image)
 {
     if (!CHECK_STRUCT_TYPE(input_image, liq_image)) return;
 
     liq_image_free_rgba_source(input_image);
 
-    if (input_image->noise) {
-        input_image->free(input_image->noise);
-    }
+    liq_image_free_noise(input_image);
 
     if (input_image->edges) {
         input_image->free(input_image->edges);
@@ -1216,10 +1242,7 @@ static histogram *get_histogram(liq_image *input_image, liq_attr *options)
         options->fast_palette = true; // no point having perfect match with imperfect colors. Also mismatch slows down search.
     }
 
-    if (input_image->noise) {
-        input_image->free(input_image->noise);
-        input_image->noise = NULL;
-    }
+    liq_image_free_noise(input_image);
 
     if (input_image->free_pixels && input_image->f_pixels) {
         liq_image_free_rgba_source(input_image); // bow can free the RGBA source if copy has been made in f_pixels
@@ -1338,7 +1361,9 @@ static void contrast_maps(liq_image *image)
 
     image->free(tmp);
 
+    liq_image_free_noise(image);
     image->noise = noise;
+    image->free_noise = true;
     image->edges = edges;
 }
 

@@ -338,6 +338,8 @@ Passes ownership of bitmap and/or rows memory to the `liq_image` object, so you 
 
 * `LIQ_OWN_ROWS` makes array of row pointers (but not bitmap pointed by these rows) owned by the object. Rows will be freed when object is deallocated. If you set this flag you must **not** free the rows array yourself. This flag is valid only if the object has been created with `liq_image_create_rgba_rows()`.
 
+* `LIQ_OWN_QUALITY_MAP` makes bitmap set by `liq_image_set_quality_map()` owned by the object.
+
 These flags can be combined with binary *or*, i.e. `LIQ_OWN_PIXELS | LIQ_OWN_ROWS`.
 
 This function must not be used if the image has been created with `liq_image_create_custom()`.
@@ -411,6 +413,16 @@ Sets up callback function to be called when the library reports work progress or
 In the log callback the `message` is a zero-terminated string containing informative message to output. It is valid only until the callback returns.
 
 `liq_set_log_flush_callback()` sets up callback function that will be called after the last log callback, which can be used to flush buffers and free resources used by the log callback.
+
+----
+
+    liq_error liq_image_set_quality_map(liq_image*, unsigned char *map);
+
+Sets quality per pixel. You can use this function to mark which areas of the image are important.
+
+The `map` argument must be a bitmap covering the entire image, one byte per pixel (`width`*`height` bytes large). Higher values (up to 255) will make quantization give more weight to corresponding pixels. Pixels with lower values in the quality map will be less likely to get a color in the palette.
+
+You must call this function before the image is used for quantization. You must not free the bitmap before `liq_image_destroy()` is called.
 
 ----
 
