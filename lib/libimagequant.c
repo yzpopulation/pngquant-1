@@ -959,6 +959,35 @@ LIQ_NONNULL static int compare_popularity(const void *ch1, const void *ch2)
     return v1 > v2 ? -1 : 1;
 }
 
+LIQ_NONNULL static float luminance(const f_pixel* p)
+{
+    return 0.2126 * p->r + 0.7152 * p->g + 0.0722 * p->b; // sRGB
+}
+
+LIQ_NONNULL static int compare_luminance(const void *ch1, const void *ch2)
+{
+    const f_pixel* p1 = &((const colormap_item*)ch1)->acolor;
+    const f_pixel* p2 = &((const colormap_item*)ch2)->acolor;
+    return luminance(p1) > luminance(p2) ? -1 : 1;
+}
+
+LIQ_NONNULL static int next_distance(colormap_item *map, const unsigned int colors)
+{
+    const f_pixel p1 = ((const colormap_item*)map)->acolor;
+    float tmp_distance = sqrtf(255 * 4);
+    unsigned char tmp = 0;
+    for (unsigned int i = 1 ; i < colors; i++) {
+        const f_pixel p2 = ((const colormap_item*)map + i)->acolor;
+        const float distance = sqrtf(p1.r - p2.r) + sqrtf(p1.g - p2.g) + sqrtf(p1.b - p2.b) + sqrtf(p1.a - p2.a);
+        if (distance < tmp_distance) {
+            tmp_distance = distance;
+            tmp = i;
+        }
+        i++;
+    }
+    return tmp;
+}
+
 LIQ_NONNULL static void sort_palette_qsort(colormap *map, int start, int nelem)
 {
     if (!nelem) return;
@@ -969,6 +998,15 @@ LIQ_NONNULL static void sort_palette_qsort(colormap *map, int start, int nelem)
     const colormap_item tmp = (map)->palette[(a)]; \
     (map)->palette[(a)] = (map)->palette[(b)]; \
     (map)->palette[(b)] = tmp; }
+
+LIQ_NONNULL static void sort_palette_distance(colormap *map, int start, int nelem)
+{
+    if (!nelem) return;
+    qsort(map->palette + start, nelem, sizeof(map->palette[0]), compare_popularity);
+    // qsort(map->palette + start, nelem, sizeof(map->palette[0]), compare_luminance);
+    for (unsigned int i = start + 1; i < nelem; i++)
+        SWAP_PALETTE(map, i, i + next_distance(map->palette + i - 1, nelem - i));
+}
 
 LIQ_NONNULL static void sort_palette(colormap *map, const liq_attr *options)
 {
@@ -1017,14 +1055,15 @@ LIQ_NONNULL static void sort_palette(colormap *map, const liq_attr *options)
     /* colors sorted by popularity make pngs slightly more compressible
      * opaque and transparent are sorted separately
      */
-    sort_palette_qsort(map, 0, num_transparent);
-    sort_palette_qsort(map, num_transparent, non_fixed_colors - num_transparent);
-
+    sort_palette_distance(map, 0, num_transparent);
+    sort_palette_distance(map, num_transparent, non_fixed_colors - num_transparent);
+/*
     if (non_fixed_colors > 9 && map->colors > 16) {
         SWAP_PALETTE(map, 7, 1); // slightly improves compression
         SWAP_PALETTE(map, 8, 2);
         SWAP_PALETTE(map, 9, 3);
     }
+*/
 }
 
 inline static unsigned int posterize_channel(unsigned int color, unsigned int bits)
