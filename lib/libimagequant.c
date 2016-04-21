@@ -1004,8 +1004,8 @@ LIQ_NONNULL static void sort_palette_distance(colormap *map, int start, int nele
     if (!nelem) return;
     qsort(map->palette + start, nelem, sizeof(map->palette[0]), compare_popularity);
     // qsort(map->palette + start, nelem, sizeof(map->palette[0]), compare_luminance);
-    for (unsigned int i = start + 1; i < nelem; i++)
-        SWAP_PALETTE(map, i, i + next_distance(map->palette + i - 1, nelem - i));
+    for (unsigned int i = start; i < nelem; i++)
+        SWAP_PALETTE(map, i, i + next_distance(map->palette + i, nelem - i));
 }
 
 LIQ_NONNULL static void sort_palette(colormap *map, const liq_attr *options)
