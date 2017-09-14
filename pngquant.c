@@ -56,7 +56,7 @@ use --force to overwrite. See man page for full list of options.\n"
 #endif
 
 #include "rwpng.h"  /* typedefs, common macros, public prototypes */
-#include "libimagequant.h" /* if it fails here, run: git submodule update; ./configure; or add -Ilib to compiler flags */
+#include "libimagequant.h" /* if it fails here, run: git submodule update */
 #include "pngquant_opts.h"
 
 static pngquant_error prepare_output_image(liq_result *result, liq_image *input_image, rwpng_color_transform tag, png8_image *output_image);
@@ -187,23 +187,6 @@ static bool parse_quality(const char *quality, liq_attr *options, bool *min_qual
 
 pngquant_error pngquant_main(struct pngquant_options *options);
 static pngquant_error pngquant_file_internal(const char *filename, const char *outname, struct pngquant_options *options);
-
-#ifndef PNGQUANT_NO_MAIN
-int main(int argc, char *argv[])
-{
-    struct pngquant_options options = {
-        .floyd = 1.f, // floyd-steinberg dithering
-        .strip = false,
-    };
-
-    pngquant_error retval = pngquant_parse_options(argc, argv, &options);
-    if (retval != SUCCESS) {
-        return retval;
-    }
-
-    return pngquant_main(&options);
-}
-#endif
 
 pngquant_error pngquant_main(struct pngquant_options *options)
 {

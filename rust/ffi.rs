@@ -4,11 +4,11 @@ use std::os::raw::*;
 use imagequant_sys::*;
 
 extern "C" {
-    pub fn pngquant_main(options: &mut pngquant_options) -> c_int;
+    pub(crate) fn pngquant_main(options: &mut pngquant_options) -> c_int;
 }
 
 #[repr(C)]
-pub struct pngquant_options {
+pub(crate) struct pngquant_options {
     pub liq: *mut liq_attr,
     pub fixed_palette_image: *mut liq_image,
     pub log_callback: liq_log_callback_function,

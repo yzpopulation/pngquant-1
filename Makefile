@@ -1,39 +1,22 @@
--include config.mk
-
 LIQSRCDIR ?= lib
 BIN ?= pngquant
 BINPREFIX ?= $(DESTDIR)$(PREFIX)/bin
 MANPREFIX ?= $(DESTDIR)$(PREFIX)/share/man
 
-OBJS = pngquant.o pngquant_opts.o rwpng.o
-
-STATICLIB = $(LIQSRCDIR)/libimagequant.a
 DISTFILES = *.[chm] pngquant.1 Makefile configure README.md INSTALL CHANGELOG COPYRIGHT Cargo.toml
 TARNAME = pngquant-$(VERSION)
 TARFILE = $(TARNAME)-src.tar.gz
 
 LIBDISTFILES = $(LIQSRCDIR)/*.[ch] $(LIQSRCDIR)/COPYRIGHT $(LIQSRCDIR)/README.md $(LIQSRCDIR)/configure $(LIQSRCDIR)/Makefile $(LIQSRCDIR)/Cargo.toml
 
-TESTBIN = test/test
-
 all: $(BIN)
 
-$(LIQSRCDIR)/config.mk: config.mk
-	( cd '$(LIQSRCDIR)'; ./configure $(LIQCONFIGUREFLAGS) )
+$(BIN)::
+	MACOSX_DEPLOYMENT_TARGET=10.7 cargo build --release
+	cp target/release/pngquant "$@"
 
-$(STATICLIB): $(LIQSRCDIR)/config.mk $(LIBDISTFILES)
-	$(MAKE) -C '$(LIQSRCDIR)' static
-
-$(OBJS): $(wildcard *.h) config.mk
-
-$(BIN): $(OBJS) $(STATICLIBDEPS)
-	$(CC) $(OBJS) $(CFLAGS) $(LDFLAGS) -o $@
-
-$(TESTBIN): test/test.o $(STATICLIBDEPS)
-	$(CC) test/test.o $(CFLAGS) $(LDFLAGS) -o $@
-
-test: $(BIN) $(TESTBIN)
-	LD_LIBRARY_PATH='$(LIQSRCDIR)' ./test/test.sh ./test $(BIN) $(TESTBIN)
+test:
+	cargo test
 
 dist: $(TARFILE)
 
@@ -62,16 +45,12 @@ uninstall:
 
 clean:
 	-test -n '$(LIQSRCDIR)' && $(MAKE) -C '$(LIQSRCDIR)' clean
-	rm -f '$(BIN)' $(OBJS) $(TARFILE)
+	rm -f '$(BIN)' $(TARFILE)
+	cargo clean
 
 distclean: clean
 	-test -n '$(LIQSRCDIR)' && $(MAKE) -C '$(LIQSRCDIR)' distclean
 	rm -f config.mk pngquant-*-src.tar.gz
 
-config.mk: Makefile
-ifeq ($(filter %clean %distclean, $(MAKECMDGOALS)), )
-	./configure
-endif
-
-.PHONY: all clean dist distclean dll install uninstall test
+.PHONY: all clean dist distclean install uninstall test
 .DELETE_ON_ERROR:
