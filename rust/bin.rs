@@ -30,13 +30,58 @@ extern crate lcms2_sys;
 use std::os::raw::{c_uint, c_char};
 use std::process;
 use std::ptr;
+use std::io;
+use std::io::prelude::*;
 use std::ffi::CString;
 
 mod ffi;
 use ffi::*;
 
+const VERSION_SUFFIX: &'static str = "(November 2017; Rust)";
+
 fn unwrap_ptr(opt: Option<&CString>) -> *const c_char {
     opt.map(|c| c.as_ptr()).unwrap_or(ptr::null())
+}
+
+fn print_full_version(out: &mut Write) -> io::Result<()> {
+    write!(out, "pngquant, {} {}, by Kornel Lesinski, Greg Roelofs.\n", env!("CARGO_PKG_VERSION"), VERSION_SUFFIX)?;
+
+    #[cfg(debug_assertions)]
+    out.write_all(b"   WARNING: this is a DEBUG (slow) version.\n")?;
+
+    #[cfg(not(feature = "sse"))]
+    out.write_all(b"   SSE acceleration disabled.\n")?;
+
+    #[cfg(feature = "openmp")]
+    out.write_all(b"   Compiled with OpenMP (multicore support).\n")?;
+    // rwpng_version_info(fd);
+    out.write_all(b"\n")
+}
+
+fn print_usage(out: &mut Write) -> io::Result<()> {
+    out.write_all(b"\
+usage:  pngquant [options] [ncolors] -- pngfile [pngfile ...]\n\
+        pngquant [options] [ncolors] - >stdout <stdin\n\n\
+options:\n\
+  --force           overwrite existing output files (synonym: -f)\n\
+  --skip-if-larger  only save converted files if they're smaller than original\n\
+  --output file     destination file path to use instead of --ext (synonym: -o)\n\
+  --ext new.png     set custom suffix/extension for output filenames\n\
+  --quality min-max don't save below min, use fewer colors below max (0-100)\n\
+  --speed N         speed/quality trade-off. 1=slow, 3=default, 11=fast & rough\n\
+  --nofs            disable Floyd-Steinberg dithering\n\
+  --posterize N     output lower-precision color (e.g. for ARGB4444 output)\n\
+  --strip           remove optional metadata (default on Mac)\n\
+  --verbose         print status messages (synonym: -v)\n\
+\n\
+Quantizes one or more 32-bit RGBA PNGs to 8-bit (or smaller) RGBA-palette.\n\
+The output filename is the same as the input name except that\n\
+it ends in \"-fs8.png\", \"-or8.png\" or your custom extension (unless the\n\
+input is stdin, in which case the quantized image will go to stdout).\n\
+If you pass the special output path \"-\" and a single input file, that file\n\
+will be processed and the quantized image will go to stdout.\n\
+The default behavior if the output file exists is to skip the conversion;\n\
+use --force to overwrite. See man page for full list of options.\n")
 }
 
 fn main() {
@@ -102,6 +147,40 @@ fn main() {
     let files: Vec<_> = m.free.drain(..).filter_map(|s| CString::new(s).ok()).collect();
     let file_ptrs: Vec<_> = files.iter().map(|s| s.as_ptr()).collect();
 
+    let verbose = m.opt_present("v");
+
+    let print_version = m.opt_present("V");
+    if print_version {
+        println!("{} {}", env!("CARGO_PKG_VERSION"), VERSION_SUFFIX);
+        return;
+    }
+
+    let print_help = m.opt_present("h");
+    if print_help {
+        let out = &mut std::io::stdout();
+        print_full_version(out).unwrap();
+        print_usage(out).unwrap();
+        return;
+    }
+
+    let missing_arguments = !has_some_explicit_args;
+    if missing_arguments {
+        let out = &mut std::io::stderr();
+        print_full_version(out).unwrap();
+        print_usage(out).unwrap();
+        process::exit(1);
+    }
+
+    if !using_stdin && files.is_empty() {
+        let out = &mut std::io::stderr();
+        out.write_all(b"error: No input files specified\n\n").unwrap();
+        if verbose {
+            print_full_version(out).unwrap();
+        }
+        print_usage(out).unwrap();
+        process::exit(1);
+    }
+
     let mut options = pngquant_options {
         quality: unwrap_ptr(quality.as_ref()),
         extension: unwrap_ptr(extension.as_ref()),
@@ -111,7 +190,7 @@ fn main() {
         num_files: file_ptrs.len() as c_uint,
         using_stdin,
         using_stdout,
-        missing_arguments: !has_some_explicit_args,
+        missing_arguments,
         colors,
         speed,
         posterize,
@@ -121,9 +200,9 @@ fn main() {
         strip: m.opt_present("strip"),
         iebug: m.opt_present("iebug"),
         last_index_transparent: m.opt_present("transbug"),
-        print_help: m.opt_present("h"),
-        print_version: m.opt_present("V"),
-        verbose: m.opt_present("v"),
+        print_help,
+        print_version,
+        verbose,
 
         liq: ptr::null_mut(),
         fixed_palette_image: ptr::null_mut(),

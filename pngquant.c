@@ -9,29 +9,7 @@
 
 #define PNGQUANT_VERSION LIQ_VERSION_STRING " (January 2018)"
 
-#define PNGQUANT_USAGE "\
-usage:  pngquant [options] [ncolors] -- pngfile [pngfile ...]\n\
-        pngquant [options] [ncolors] - >stdout <stdin\n\n\
-options:\n\
-  --force           overwrite existing output files (synonym: -f)\n\
-  --skip-if-larger  only save converted files if they're smaller than original\n\
-  --output file     destination file path to use instead of --ext (synonym: -o)\n\
-  --ext new.png     set custom suffix/extension for output filenames\n\
-  --quality min-max don't save below min, use fewer colors below max (0-100)\n\
-  --speed N         speed/quality trade-off. 1=slow, 3=default, 11=fast & rough\n\
-  --nofs            disable Floyd-Steinberg dithering\n\
-  --posterize N     output lower-precision color (e.g. for ARGB4444 output)\n\
-  --strip           remove optional metadata (default on Mac)\n\
-  --verbose         print status messages (synonym: -v)\n\
-\n\
-Quantizes one or more 32-bit RGBA PNGs to 8-bit (or smaller) RGBA-palette.\n\
-The output filename is the same as the input name except that\n\
-it ends in \"-fs8.png\", \"-or8.png\" or your custom extension (unless the\n\
-input is stdin, in which case the quantized image will go to stdout).\n\
-If you pass the special output path \"-\" and a single input file, that file\n\
-will be processed and the quantized image will go to stdout.\n\
-The default behavior if the output file exists is to skip the conversion;\n\
-use --force to overwrite. See man page for full list of options.\n"
+#define PNGQUANT_USAGE
 
 
 #include <stdio.h>
@@ -128,24 +106,11 @@ static void log_callback_buferred(const liq_attr *attr, const char *msg, void* c
 
 static void print_full_version(FILE *fd)
 {
-    fprintf(fd, "pngquant, %s, by Kornel Lesinski, Greg Roelofs.\n"
-        #ifndef NDEBUG
-                    "   WARNING: this is a DEBUG (slow) version.\n" /* NDEBUG disables assert() */
-        #endif
-        #if !USE_SSE && (defined(__SSE__) || defined(__amd64__) || defined(__X86_64__) || defined(__i386__))
-                    "   SSE acceleration disabled.\n"
-        #endif
-        #if _OPENMP
-                    "   Compiled with OpenMP (multicore support).\n"
-        #endif
-        , PNGQUANT_VERSION);
-    rwpng_version_info(fd);
-    fputs("\n", fd);
+
 }
 
 static void print_usage(FILE *fd)
 {
-    fputs(PNGQUANT_USAGE, fd);
 }
 
 /**
@@ -190,23 +155,6 @@ static pngquant_error pngquant_file_internal(const char *filename, const char *o
 
 pngquant_error pngquant_main(struct pngquant_options *options)
 {
-    if (options->print_version) {
-        puts(PNGQUANT_VERSION);
-        return SUCCESS;
-    }
-
-    if (options->missing_arguments) {
-        print_full_version(stderr);
-        print_usage(stderr);
-        return MISSING_ARGUMENT;
-    }
-
-    if (options->print_help) {
-        print_full_version(stdout);
-        print_usage(stdout);
-        return SUCCESS;
-    }
-
     options->liq = liq_attr_create();
 
     if (!options->liq) {
@@ -292,15 +240,6 @@ pngquant_error pngquant_main(struct pngquant_options *options)
             liq_image_add_fixed_color(options->fixed_palette_image, pal->entries[i]);
         }
         liq_result_destroy(tmp_quantize);
-    }
-
-    if (!options->num_files && !options->using_stdin) {
-        fputs("No input files specified.\n", stderr);
-        if (options->verbose) {
-            print_full_version(stderr);
-        }
-        print_usage(stderr);
-        return MISSING_ARGUMENT;
     }
 
 #ifdef _OPENMP
