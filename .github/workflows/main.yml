@@ -86,6 +86,8 @@ jobs:
         rust-version: ${{ matrix.rust }}
         components: rustfmt
     - uses: actions/checkout@v1
+      with:
+        ref: msvc
 #     - name: Check formatting
 #       run: cargo fmt -- --check
 #     - name: Run tests
