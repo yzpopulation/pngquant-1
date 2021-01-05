@@ -94,10 +94,8 @@ jobs:
 #       run: cargo test --verbose
     - name: Git clone
       run: git clone -b msvc --recursive https://github.com/kornelski/pngquant.git
-    - name: Change workplace
-      run: cd pngquant
     - name: Build release
-      run: cargo build --verbose --release
+      run: cd pngquant &&cargo build --verbose --release
     - name: Upload unix binary
       uses: actions/upload-artifact@v1
       if: matrix.os != 'windows-latest'
