@@ -86,10 +86,10 @@ jobs:
         rust-version: ${{ matrix.rust }}
         components: rustfmt
     - uses: actions/checkout@v1
-    - name: Check formatting
-      run: cargo fmt -- --check
-    - name: Run tests
-      run: cargo test --verbose
+#     - name: Check formatting
+#       run: cargo fmt -- --check
+#     - name: Run tests
+#       run: cargo test --verbose
     - name: Build release
       run: cargo build --verbose --release
     - name: Upload unix binary
